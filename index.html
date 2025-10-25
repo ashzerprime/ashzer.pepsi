@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bouteille de Pepsi — site inutile</title>
+  <style>
+    :root{--bg:#0b1020;--glass:#e6f0ff10;--liquid:#0f6fd8}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial;background:linear-gradient(180deg,#071028 0%, #07172a 60%, #041022 100%);color:#fff}
+    .wrap{height:100%;display:flex;align-items:center;justify-content:center;gap:40px;flex-direction:column}
+    h1{font-weight:600;letter-spacing:0.02em}
+    .stage{width:260px;height:640px;display:grid;place-items:center;position:relative}
+
+    /* Center the svg and give a subtle glow */
+    svg{width:220px;height:auto;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.6))}
+
+    .caption{opacity:0.9;font-size:14px}
+
+    /* small helper for mobile */
+    .hint{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:12px;color:#cfe3ff88}
+
+    /* make selects/buttons look nice (non-essential) */
+    .controls{display:flex;gap:10px;margin-top:8px}
+    button{background:#0f6fd8;border:none;padding:8px 12px;border-radius:8px;color:white;cursor:pointer}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Site inutile — Bouteille de Pepsi</h1>
+    <div class="stage" id="stage">
+      <!-- Inline SVG bottle. The blue "liquid" rect is clipped to the bottle shape and we animate its height. -->
+      <svg id="bottleSvg" viewBox="0 0 200 600" xmlns="http://www.w3.org/2000/svg" aria-label="Bouteille">
+        <defs>
+          <!-- simple bottle path (stylised) -->
+          <clipPath id="bottleClip">
+            <path id="bottlePath" d="M95 10c0 0-4 8-4 20v20c0 6-6 12-6 18v24c0 6-3 8-3 15v80c0 10-12 22-12 22-6 6-10 16-10 24v210c0 18 12 32 26 38 18 8 48 10 48 10s30-2 48-10c14-6 26-20 26-38V230c0-8-4-18-10-24 0 0-12-12-12-22v-80c0-7-3-9-3-15v-24c0-6-6-12-6-18V30c0-12-4-20-4-20s-22-4-66 0z"/>
+          </clipPath>
+        </defs>
+
+        <!-- bottle glass outline -->
+        <g id="bottleGroup" transform="translate(0,0)">
+          <!-- liquid: a rect that we move up/down. it's clipped to the bottle shape -->
+          <g clip-path="url(#bottleClip)">
+            <rect id="liquid" x="0" y="600" width="200" height="600" fill="#0f6fd8" opacity="0.95" />
+          </g>
+
+          <!-- bottle glass (border and label) -->
+          <path d="M95 10c0 0-4 8-4 20v20c0 6-6 12-6 18v24c0 6-3 8-3 15v80c0 10-12 22-12 22-6 6-10 16-10 24v210c0 18 12 32 26 38 18 8 48 10 48 10s30-2 48-10c14-6 26-20 26-38V230c0-8-4-18-10-24 0 0-12-12-12-22v-80c0-7-3-9-3-15v-24c0-6-6-12-6-18V30c0-12-4-20-4-20s-22-4-66 0z" fill="none" stroke="#dfeafb88" stroke-width="4"/>
+
+          <!-- label (Pepsi-like) -->
+          <g transform="translate(18,240)">
+            <ellipse cx="82" cy="60" rx="64" ry="42" fill="#fff" opacity="0.95"/>
+            <!-- red/blue circle inside label -->
+            <path d="M82 34 a34 34 0 1 0 0 52" fill="#e02b2b" />
+            <path d="M82 34 a34 34 0 1 1 0 52" fill="#0e63b8" />
+            <circle cx="82" cy="60" r="34" fill="none" stroke="#ffffffcc" stroke-width="2"/>
+          </g>
+
+        </g>
+      </svg>
+
+      <div class="hint">Déplace la souris sur la bouteille pour la remplir. Sur mobile, touche et fais glisser.</div>
+    </div>
+
+    <div class="caption">Ceci est inutile mais satisfaisant ✨</div>
+    <div class="controls">
+      <button id="resetBtn">Vider</button>
+      <button id="fullBtn">Remplir</button>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const svg = document.getElementById('bottleSvg');
+      const liquid = document.getElementById('liquid');
+      const stage = document.getElementById('stage');
+      const resetBtn = document.getElementById('resetBtn');
+      const fullBtn = document.getElementById('fullBtn');
+
+      // parameters
+      const minY = -20; // top-most y for rect (fully full)
+      const maxY = 600; // bottom (empty)
+      let targetY = maxY; // where we want the rect's y to move to
+      let currentY = maxY;
+      let isHovering = false;
+
+      // adjust to svg coordinate space when resizing
+      function clientToSVGPoint(clientX, clientY){
+        const pt = svg.createSVGPoint();
+        pt.x = clientX; pt.y = clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+      }
+
+      // detect if the cursor is over the bottle path by checking the element under the pointer
+      function isPointerOverBottle(clientX, clientY){
+        const el = document.elementFromPoint(clientX, clientY);
+        if(!el) return false;
+        // if the element is inside the svg bottleGroup path or label, consider it inside
+        return el.closest && el.closest('#bottleGroup');
+      }
+
+      function onPointerMove(e){
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        if(isPointerOverBottle(clientX, clientY)){
+          isHovering = true;
+          // map vertical position to how full the bottle becomes (nice extra interaction)
+          const pt = clientToSVGPoint(clientX, clientY);
+          // pt.y ranges roughly from 0..600; we'll invert so pointer higher => more fill
+          const frac = 1 - Math.min(Math.max((pt.y - 0) / 600, 0), 1);
+          // desired fill level: at least 30% when hovering, or up to pointer-based
+          const desired = minY + (maxY - minY) * (1 - (0.3 + 0.7 * frac));
+          targetY = desired;
+        } else {
+          isHovering = false;
+        }
+      }
+
+      function animate(){
+        // when hovering, targetY is set by pointer; otherwise slowly go down (empty)
+        if(!isHovering){
+          // slowly empty if not hovering
+          targetY = Math.min(maxY, targetY + 0.6);
+        }
+
+        // ease currentY towards targetY
+        currentY += (targetY - currentY) * 0.12;
+        liquid.setAttribute('y', currentY);
+
+        requestAnimationFrame(animate);
+      }
+
+      // Initialize liquid at bottom (empty)
+      liquid.setAttribute('y', maxY);
+
+      // pointer listeners on the whole document so touch works too
+      ['mousemove','touchmove'].forEach(evt => document.addEventListener(evt, onPointerMove, {passive:true}));
+
+      // if pointer leaves window, set hovering false
+      document.addEventListener('mouseleave', ()=>{ isHovering=false; });
+
+      // control buttons
+      resetBtn.addEventListener('click', ()=>{ targetY = maxY; });
+      fullBtn.addEventListener('click', ()=>{ targetY = minY; });
+
+      // start animation loop
+      requestAnimationFrame(animate);
+
+      // accessibility: keyboard controls
+      document.addEventListener('keydown', (e)=>{
+        if(e.key === 'f') targetY = minY; // full
+        if(e.key === 'v') targetY = maxY; // vider
+      });
+
+    })();
+  </script>
+</body>
+</html>
