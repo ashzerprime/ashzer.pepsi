@@ -1,0 +1,28 @@
+footer {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px 25px;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  text-align: left;
+}
+
+.footer-left p {
+  margin: 3px 0;
+}
+
+.footer-left a {
+  color: #00aced;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.footer-left a:hover {
+  text-decoration: underline;
+}
+
+.footer-right {
+  text-align: right;
+}
